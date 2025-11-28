@@ -1,8 +1,4 @@
-const API_URL =
-  process.env.API_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:3001";
-
+const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL;
 export interface ApiResponse<T> {
   success?: boolean;
   data?: T;
@@ -30,30 +26,59 @@ class ApiClient {
     options?: RequestInit
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-      },
-    });
 
-    if (!response.ok) {
-      let errorMessage = response.statusText || "API request failed";
-      try {
-        const error = await response.json();
-        if (error.message) {
-          errorMessage = Array.isArray(error.message)
-            ? error.message.join(", ")
-            : error.message;
-        } else if (error.error) {
-          errorMessage = error.error;
-        }
-      } catch {}
-      throw new Error(errorMessage);
+    // Log in server-side contexts for debugging
+    if (typeof window === "undefined") {
+      console.log(`[ApiClient] Making request to: ${url}`);
+      console.log(`[ApiClient] Base URL: ${this.baseUrl}`);
+      console.log(`[ApiClient] Endpoint: ${endpoint}`);
     }
 
-    return response.json();
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+        },
+      });
+
+      if (!response.ok) {
+        let errorMessage = response.statusText || "API request failed";
+        try {
+          const error = await response.json();
+          if (error.message) {
+            errorMessage = Array.isArray(error.message)
+              ? error.message.join(", ")
+              : error.message;
+          } else if (error.error) {
+            errorMessage = error.error;
+          }
+        } catch {}
+
+        if (typeof window === "undefined") {
+          console.error(
+            `[ApiClient] Request failed: ${response.status} ${response.statusText}`
+          );
+          console.error(`[ApiClient] URL: ${url}`);
+          console.error(`[ApiClient] Error message: ${errorMessage}`);
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      return response.json();
+    } catch (error) {
+      if (typeof window === "undefined") {
+        console.error(`[ApiClient] Fetch error:`, error);
+        console.error(`[ApiClient] URL attempted: ${url}`);
+        if (error instanceof Error) {
+          console.error(`[ApiClient] Error message: ${error.message}`);
+          console.error(`[ApiClient] Error stack: ${error.stack}`);
+        }
+      }
+      throw error;
+    }
   }
 
   async createUser(data: {
@@ -212,4 +237,6 @@ export interface Message {
   createdAt: string;
 }
 
-export const apiClient = new ApiClient(API_URL);
+export const apiClient = new ApiClient(
+  API_URL || "https://servicem8-fsd.onrender.com"
+);

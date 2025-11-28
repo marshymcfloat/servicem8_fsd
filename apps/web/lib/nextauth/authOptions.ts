@@ -36,13 +36,41 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials format");
         }
 
-        const result = await apiClient.verifyCredentials(
-          email,
-          phone_number,
-          password
+        // Debug: Log the API URL being used
+        const apiUrl =
+          process.env.API_URL ||
+          process.env.NEXT_PUBLIC_API_URL ||
+          "http://localhost:3001";
+        console.log("Auth: Using API URL:", apiUrl);
+        console.log(
+          "Auth: Attempting to verify credentials for:",
+          email || phone_number
         );
 
+        let result;
+        try {
+          result = await apiClient.verifyCredentials(
+            email,
+            phone_number,
+            password
+          );
+          console.log("Auth: API response received:", {
+            success: result.success,
+            hasUser: !!result.user,
+          });
+        } catch (error) {
+          console.error("Auth: API call failed:", error);
+          console.error("Auth: Error details:", {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+          });
+          throw new Error(
+            "Unable to connect to authentication server. Please try again later."
+          );
+        }
+
         if (!result.success || !result.user) {
+          console.log("Auth: Invalid credentials provided");
           throw new Error("Invalid credentials");
         }
 
