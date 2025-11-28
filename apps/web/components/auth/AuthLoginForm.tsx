@@ -7,6 +7,9 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { LoaderCircle } from "lucide-react";
 
 export default function AuthLoginForm({
   setContent,
@@ -22,23 +25,39 @@ export default function AuthLoginForm({
     },
   });
 
-  const onSubmit = async (data: AuthLoginTypes) => {
-    try {
+  const { mutate: handleLogin, isPending } = useMutation({
+    mutationFn: async (data: AuthLoginTypes) => {
       const result = await signIn("credentials", {
         email_or_phone: data.email_or_phone,
         password: data.password,
         redirect: false,
       });
 
-      if (result?.ok) {
-        router.push("/bookings");
-        router.refresh();
-      } else {
-        form.setError("root", { message: result?.error || "Login failed" });
+      if (!result) {
+        throw new Error("No response from server");
       }
-    } catch (error) {
-      form.setError("root", { message: "An error occurred" });
-    }
+
+      if (!result.ok) {
+        throw new Error(result.error || "Login failed");
+      }
+
+      return result;
+    },
+    onSuccess: () => {
+      toast.success("Login successful! Redirecting...");
+      router.push("/bookings");
+      router.refresh();
+    },
+    onError: (error) => {
+      const errorMessage =
+        error instanceof Error ? error.message : "Login failed";
+      toast.error(errorMessage);
+      form.setError("root", { message: errorMessage });
+    },
+  });
+
+  const onSubmit = (data: AuthLoginTypes) => {
+    handleLogin(data);
   };
 
   return (
@@ -78,12 +97,9 @@ export default function AuthLoginForm({
           </p>
         )}
         <div className="flex flex-col gap-2 mt-12">
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={form.formState.isSubmitting}
-          >
-            {form.formState.isSubmitting ? "Logging in..." : "Login"}
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending && <LoaderCircle className="animate-spin mr-2" />}
+            {isPending ? "Logging in..." : "Login"}
           </Button>
           <Button
             type="button"
