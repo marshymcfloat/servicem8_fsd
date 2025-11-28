@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { promises as fs } from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
@@ -9,7 +13,7 @@ export interface User {
   email: string;
   username: string;
   phone_numer: string;
-  password: string; // hashed
+  password: string;
   createdAt: string;
 }
 
@@ -52,12 +56,38 @@ export class UserService {
     return users.find((user) => user.email === email) || null;
   }
 
+  async getUserWithPasswordByPhone(phone: string): Promise<User | null> {
+    const users = await this.readUsers();
+    return users.find((user) => user.phone_numer === phone) || null;
+  }
+
+  async getUserByPhone(phone: string): Promise<Omit<User, 'password'> | null> {
+    const users = await this.readUsers();
+    const user = users.find((user) => user.phone_numer === phone);
+    if (!user) return null;
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  }
+
+  async verifyUserCredentialsByPhone(
+    phone: string,
+    password: string,
+  ): Promise<Omit<User, 'password'> | null> {
+    const user = await this.getUserWithPasswordByPhone(phone);
+    if (!user) return null;
+
+    const isValid = await this.verifyPassword(password, user.password);
+    if (!isValid) return null;
+
+    const { password: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  }
+
   async createUser(
     data: Omit<AuthRegisterTypes, 'confirm_password'>,
   ): Promise<Omit<User, 'password'>> {
     const users = await this.readUsers();
 
-    // Check if user already exists
     if (users.some((user) => user.email === data.email)) {
       throw new ConflictException('User with this email already exists');
     }
@@ -66,10 +96,8 @@ export class UserService {
       throw new ConflictException('Username already taken');
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    // Create new user
     const newUser: User = {
       id: crypto.randomUUID(),
       email: data.email,

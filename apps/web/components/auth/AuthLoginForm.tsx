@@ -5,55 +5,91 @@ import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { useMutation } from "@tanstack/react-query";
-import { authRegisterAction } from "@/lib/server actions/authActions";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function AuthLoginForm({
   setContent,
 }: {
   setContent: (content: "register" | "login") => void;
 }) {
+  const router = useRouter();
   const form = useForm<AuthLoginTypes>({
     resolver: zodResolver(authLoginSchema),
     defaultValues: {
-      email: "",
+      email_or_phone: "",
       password: "",
     },
   });
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: authRegisterAction,
-    onSuccess: (data) => {},
-  });
+  const onSubmit = async (data: AuthLoginTypes) => {
+    try {
+      const result = await signIn("credentials", {
+        email_or_phone: data.email_or_phone,
+        password: data.password,
+        redirect: false,
+      });
 
-  const formInputs = Object.keys(form.getValues()) as (keyof AuthLoginTypes)[];
+      if (result?.ok) {
+        router.push("/bookings");
+        router.refresh();
+      } else {
+        form.setError("root", { message: result?.error || "Login failed" });
+      }
+    } catch (error) {
+      form.setError("root", { message: "An error occurred" });
+    }
+  };
 
   return (
     <Form {...form}>
-      <form className="space-y-4">
-        {formInputs.map((input) => (
-          <FormField
-            control={form.control}
-            key={input}
-            name={input}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="capitalize">{input}</FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    type={input === "email" ? "email" : "password"}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        ))}
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="email_or_phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email or Phone Number</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  type="text"
+                  placeholder="your@email.com or 1234567890"
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input {...field} type="password" />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        {form.formState.errors.root && (
+          <p className="text-sm text-red-500">
+            {form.formState.errors.root.message}
+          </p>
+        )}
         <div className="flex flex-col gap-2 mt-12">
-          <Button type="submit" className="w-full">
-            Login
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={form.formState.isSubmitting}
+          >
+            {form.formState.isSubmitting ? "Logging in..." : "Login"}
           </Button>
-          <Button variant={"ghost"} onClick={() => setContent("register")}>
+          <Button
+            type="button"
+            variant={"ghost"}
+            onClick={() => setContent("register")}
+          >
             Register
           </Button>
         </div>

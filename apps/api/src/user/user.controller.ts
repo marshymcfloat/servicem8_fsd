@@ -24,12 +24,22 @@ export class UserController {
   @Post('verify-credentials')
   @HttpCode(HttpStatus.OK)
   async verifyCredentials(@Body() loginDto: LoginDto) {
-    const user = await this.userService.verifyUserCredentials(
-      loginDto.email,
-      loginDto.password,
-    );
+    let user;
+
+    if (loginDto.email) {
+      user = await this.userService.verifyUserCredentials(
+        loginDto.email,
+        loginDto.password,
+      );
+    } else if (loginDto.phone_number) {
+      user = await this.userService.verifyUserCredentialsByPhone(
+        loginDto.phone_number,
+        loginDto.password,
+      );
+    }
+
     if (!user) {
-      return { success: false, message: 'Invalid email or password' };
+      return { success: false, message: 'Invalid credentials' };
     }
     return { success: true, user };
   }

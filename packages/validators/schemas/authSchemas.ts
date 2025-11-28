@@ -34,10 +34,9 @@ export const authRegisterSchemas = z
 export type AuthRegisterTypes = z.infer<typeof authRegisterSchemas>;
 
 export const authLoginSchema = z.object({
-  email: z
+  email_or_phone: z
     .string()
-    .email({ message: "Invalid email address" })
-    .min(1, { message: "Email is required" }),
+    .min(1, { message: "Email or phone number is required" }),
   password: z
     .string()
     .min(1, { message: "Password is required" })

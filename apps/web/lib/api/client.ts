@@ -39,10 +39,18 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: response.statusText,
-      }));
-      throw new Error(error.message || "API request failed");
+      let errorMessage = response.statusText || "API request failed";
+      try {
+        const error = await response.json();
+        if (error.message) {
+          errorMessage = Array.isArray(error.message)
+            ? error.message.join(", ")
+            : error.message;
+        } else if (error.error) {
+          errorMessage = error.error;
+        }
+      } catch {}
+      throw new Error(errorMessage);
     }
 
     return response.json();
@@ -61,12 +69,13 @@ class ApiClient {
   }
 
   async verifyCredentials(
-    email: string,
-    password: string
+    email?: string,
+    phone_number?: string,
+    password: string = ""
   ): Promise<{ success: boolean; user?: User; message?: string }> {
     return this.request("/user/verify-credentials", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, phone_number, password }),
     });
   }
 
@@ -85,6 +94,122 @@ class ApiClient {
       return null;
     }
   }
+
+  async getBookings(email?: string, phone?: string): Promise<Booking[]> {
+    const params = new URLSearchParams();
+    if (email) params.append("email", email);
+    if (phone) params.append("phone", phone);
+    return this.request<Booking[]>(`/bookings?${params.toString()}`);
+  }
+
+  async getBookingById(id: string): Promise<BookingDetails | null> {
+    try {
+      return this.request<BookingDetails>(`/bookings/${id}`);
+    } catch {
+      return null;
+    }
+  }
+
+  async getBookingAttachments(bookingId: string): Promise<Attachment[]> {
+    try {
+      return this.request<Attachment[]>(`/bookings/${bookingId}/attachments`);
+    } catch {
+      return [];
+    }
+  }
+
+  async getMessagesByBooking(bookingId: string): Promise<Message[]> {
+    try {
+      return this.request<Message[]>(`/messages/booking/${bookingId}`);
+    } catch {
+      return [];
+    }
+  }
+
+  async createMessage(
+    bookingId: string,
+    userId: string,
+    content: string
+  ): Promise<Message> {
+    return this.request<Message>("/messages", {
+      method: "POST",
+      body: JSON.stringify({ bookingId, userId, content }),
+    });
+  }
+}
+
+export interface Booking {
+  id: string;
+  jobNumber: string;
+  title: string;
+  status: string;
+  scheduledStart?: string;
+  scheduledEnd?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  createdAt: string;
+  notes?: string;
+  priority?: string;
+}
+
+export interface BookingDetails {
+  booking: {
+    id: string;
+    type: string;
+    startTime?: string;
+    endTime?: string;
+    notes?: string;
+    status?: string;
+    jobNumber?: string;
+    jobStatus?: string;
+    description?: string;
+  };
+  job: {
+    uuid: string;
+    jobNumber: string;
+    status: string;
+    description?: string;
+    addressStreet?: string;
+    addressCity?: string;
+    addressState?: string;
+    scheduledStart?: string;
+    scheduledEnd?: string;
+  } | null;
+  customer: {
+    uuid: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    mobile?: string;
+    address?: string;
+  } | null;
+  attachments: Attachment[];
+  summary: {
+    bookingId: string;
+    jobId?: string;
+    jobNumber: string;
+    status: string;
+    customerName: string;
+    startTime?: string;
+    endTime?: string;
+    attachmentCount: number;
+  };
+}
+
+export interface Attachment {
+  id: string;
+  filename: string;
+  url: string;
+  createdAt: string;
+}
+
+export interface Message {
+  id: string;
+  bookingId: string;
+  userId: string;
+  content: string;
+  createdAt: string;
 }
 
 export const apiClient = new ApiClient(API_URL);

@@ -9,7 +9,7 @@ export default function AuthClient() {
   return (
     <>
       {content === "register" ? (
-        <AuthRegisterForm />
+        <AuthRegisterForm setContent={setContent} />
       ) : (
         <AuthLoginForm setContent={setContent} />
       )}

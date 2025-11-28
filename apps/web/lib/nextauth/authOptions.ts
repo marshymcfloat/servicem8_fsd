@@ -8,29 +8,42 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        email_or_phone: { label: "Email or Phone Number", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email and password are required");
+        if (!credentials?.password) {
+          throw new Error("Password is required");
         }
 
+        const email_or_phone = credentials.email_or_phone;
+        const password = credentials.password;
+
+        if (!email_or_phone) {
+          throw new Error("Email or phone number is required");
+        }
+
+        const isEmailInput = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email_or_phone);
+        const email = isEmailInput ? email_or_phone : undefined;
+        const phone_number = !isEmailInput ? email_or_phone : undefined;
+
         const validationResult = authLoginSchema.safeParse({
-          email: credentials.email,
-          password: credentials.password,
+          email_or_phone,
+          password,
         });
 
         if (!validationResult.success) {
-          throw new Error("Invalid email or password format");
+          throw new Error("Invalid credentials format");
         }
 
-        const { email, password } = validationResult.data;
-
-        const result = await apiClient.verifyCredentials(email, password);
+        const result = await apiClient.verifyCredentials(
+          email,
+          phone_number,
+          password
+        );
 
         if (!result.success || !result.user) {
-          throw new Error("Invalid email or password");
+          throw new Error("Invalid credentials");
         }
 
         const user = result.user;

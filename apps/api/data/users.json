@@ -6,5 +6,13 @@
     "phone_numer": "09385540016",
     "password": "$2b$10$URMkoCXzc.e9g2ahEsXafOEqbiK3GLiDbBcaTJiT3NjtBrfnp85Ae",
     "createdAt": "2025-11-28T04:27:57.362Z"
+  },
+  {
+    "id": "257fabc5-08e5-430e-9a6a-d39b1ab17f51",
+    "email": "rewbiee@gmail.com",
+    "username": "marshymcfloaty",
+    "phone_numer": "09064257057",
+    "password": "$2b$10$PM29lHuNzVoSaQZ/7bGARO/n7/IcHFRQLLt/H6L7sCoQa.kQ0mXoW",
+    "createdAt": "2025-11-28T06:07:03.266Z"
   }
 ]
