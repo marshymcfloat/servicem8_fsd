@@ -4,7 +4,8 @@ import { Card } from "@/components/ui/card";
 import { BookingDetailSkeleton } from "./BookingDetailSkeleton";
 import { MessagesSection } from "./MessagesSection";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://servicem8-fsd.onrender.com";
 
 async function BookingData({ bookingId }: { bookingId: string }) {
   const booking = await getServerBookingById(bookingId);
